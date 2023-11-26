@@ -9,6 +9,7 @@ import (
 	_ "geotask/module/courier/models"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis"
+	httpSwagger "github.com/swaggo/http-swagger"
 	"myRedis/model"
 	"net/http"
 )
@@ -31,6 +32,12 @@ const (
 	CourierRadius   = 2500
 )
 
+// @title courier service
+// @version 1.0
+// @description courier service
+// @host localhost:8080
+// @BasePath /api/v1
+//go:generate swagger generate spec -o ../public/swagger.json --scan-models
 func main() {
 	router := gin.Default()
 
@@ -39,6 +46,10 @@ func main() {
 	//	DB:   0,
 	//})
 	rdb := cache.NewRedisClient("localhost", ":6379")
+
+	http.Handle("/swagger/", httpSwagger.Handler(
+		httpSwagger.URL("/docs/doc.json"),
+	))
 
 	router.POST("/move-courier", func(c *gin.Context) {
 		var courierLocation models.Point
@@ -90,6 +101,13 @@ func setCourierStatus(rdb *redis.Client, courierLocation models.Point) error {
 	return rdb.Set(ctx, redisKeyCourier, data, 0).Err()
 }
 
+// @Summary Получить информацию о курьере
+// @Description Получить текущее местоположение курьера
+// @ID getCourierStatus
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} models.Point
+// @Router /courier/status [get]
 func getCourierStatus(rdb *redis.Client) (models.Point, error) {
 	ctx := context.Background()
 	val, err := rdb.Get(ctx, redisKeyCourier).Result()
